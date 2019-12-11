@@ -60,7 +60,8 @@ class SVAE(nn.Module):
                z,
                input_ids: torch.LongTensor,
                length: torch.LongTensor):
-
+        print(input_ids.size())
+        print(length)
         input_vectors = self.word_embeddings(input_ids)
         packed_input = torch.nn.utils.rnn.pack_padded_sequence(input_vectors,
                                                                length.tolist(),
@@ -73,10 +74,10 @@ class SVAE(nn.Module):
 
     def _return_weight(self, out, length):
         alpha_fw = torch.cat([self.softmax(torch.mul(out[:length], out[length - 1]).sum(1)),
-                              torch.FloatTensor([0] * int((max(self.output_lengths) - length)))])
+                              torch.FloatTensor([0] * int((max(self.output_lengths) - length))).to(out.device)])
 
         alpha_bw = torch.cat([self.softmax(torch.mul(out[:length], out[0]).sum(1)),
-                              torch.FloatTensor([0] * int((max(self.output_lengths) - length)))])
+                              torch.FloatTensor([0] * int((max(self.output_lengths) - length))).to(out.device)])
         alpha = (alpha_fw + alpha_bw) / 2
         return alpha
 
@@ -85,7 +86,7 @@ class SVAE(nn.Module):
         log_sigma = self.log_sigma_enc(h_enc)
         sigma = torch.exp(log_sigma)
         std_z = torch.from_numpy(np.random.normal(0, 1, size=sigma.size())).float()
-        latent = mu + sigma * Variable(std_z, requires_grad=False)
+        latent = mu + sigma * Variable(std_z, requires_grad=False).to(h_enc.device)
         return latent, mu, sigma
 
 
